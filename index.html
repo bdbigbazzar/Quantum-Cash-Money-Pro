@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earn Cash Pro - Ultra Secure</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root { --primary: #0088cc; --secondary: #2ecc71; --bg: #f8f9fa; --accent: #e74c3c; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; padding-bottom: 90px; color: #2c3e50; }
+        
+        /* Auth Styles */
+        #auth-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #0088cc, #005f99); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .auth-card { width: 100%; max-width: 400px; background: white; padding: 35px; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); text-align: center; }
+        
+        .header { background: linear-gradient(135deg, #0088cc, #005f99); color: white; padding: 40px 20px 60px; border-radius: 0 0 40px 40px; text-align: center; position: relative; }
+        .stat-card { background: white; margin: -40px 20px 20px; padding: 20px; border-radius: 25px; display: flex; justify-content: space-around; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+        .card { background: white; padding: 20px; border-radius: 25px; margin: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.03); }
+        
+        .task-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 15px; cursor: pointer; width: 100%; font-weight: 700; font-size: 16px; margin-top: 10px; transition: 0.3s; }
+        .task-btn:active { transform: scale(0.95); }
+        input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #ddd; border-radius: 12px; box-sizing: border-box; background: #f9f9f9; }
+        
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: white; display: none; justify-content: space-around; padding: 15px 0; border-top: 1px solid #eee; z-index: 1000; }
+        .nav-item { border: none; background: none; color: #bdc3c7; font-size: 11px; cursor: pointer; text-align: center; }
+        .active-nav { color: var(--primary); font-weight: bold; }
+        
+        .link-text { color: var(--primary); font-size: 13px; cursor: pointer; margin-top: 10px; display: inline-block; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div id="auth-page">
+    <div class="auth-card">
+        <h2 id="auth-title" style="color: var(--primary); margin-bottom: 20px;">Welcome Back</h2>
+        <input type="email" id="auth-email" placeholder="Email Address">
+        <input type="password" id="auth-pass" placeholder="Password">
+        
+        <button class="task-btn" id="auth-btn" onclick="handleAuth()">Login Now</button>
+        
+        <div style="margin-top: 15px;">
+            <span class="link-text" id="auth-toggle" onclick="toggleAuthMode()">Create an account</span><br>
+            <span class="link-text" style="color: var(--accent); font-weight: bold;" onclick="forgotPassword()">Forgot Password?</span>
+        </div>
+    </div>
+</div>
+
+<div id="app-content" style="display:none;">
+    <div class="header">
+        <h2 style="margin:0;">Earn Cash Pro</h2>
+        <p id="user-email-display" style="font-size:12px; opacity:0.8; margin-top: 5px;"></p>
+        <button onclick="logout()" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 10px; font-size: 11px;">Logout</button>
+    </div>
+
+    <div class="stat-card">
+        <div style="text-align:center;">
+            <span style="font-size:11px; color:#999; text-transform: uppercase;">Coins</span>
+            <span style="font-size:22px; font-weight:bold; color:var(--primary); display: block;" id="user-coins">0</span>
+        </div>
+        <div style="text-align:center;">
+            <span style="font-size:11px; color:#999; text-transform: uppercase;">Short ID</span>
+            <span style="font-size:18px; font-weight:bold; display: block;" id="user-id-display">...</span>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="home-page" class="page">
+            <div class="card" style="background: linear-gradient(135deg, #2ecc71, #27ae60); color: white;">
+                <h3>🎁 Daily Bonus</h3>
+                <p style="font-size: 13px; opacity: 0.9;">Claim your daily reward of 50 coins!</p>
+                <button class="task-btn" style="background: white; color: #27ae60;" onclick="claimDaily()">Claim Reward</button>
+            </div>
+            <div class="card">
+                <h3>🎥 Video Task</h3>
+                <p style="font-size: 13px; color: #7f8c8d;">Watch a 15s video to earn 10 coins.</p>
+                <button class="task-btn" id="v-btn" onclick="startVideoTask()">Start Task</button>
+                <p id="v-timer" style="text-align: center; color: var(--accent); font-weight: bold;"></p>
+            </div>
+        </div>
+
+        <div id="withdraw-page" class="page" style="display:none;">
+            <div class="card">
+                <h3>💸 Cash Out</h3>
+                <input type="number" id="w-amount" placeholder="Amount (Min 5000)">
+                <input type="text" id="w-number" placeholder="Mobile Number">
+                <button class="task-btn" style="background: var(--accent);" onclick="submitWithdraw()">Request Payment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="nav-bar" id="navbar">
+    <button class="nav-item active-nav" onclick="showTab('home', this)">🏠<br>Home</button>
+    <button class="nav-item" onclick="showTab('withdraw', this)">💰<br>Wallet</button>
+</div>
+
+<script>
+    // Firebase Config (Replace with your actual keys if needed)
+    const firebaseConfig = {
+        apiKey: "AIzaSyDJRLhy3fnwDUvYDKSZK6UFo5DHskfn-A4",
+        authDomain: "my-first-app-9f15d.firebaseapp.com",
+        databaseURL: "https://my-first-app-9f15d-default-rtdb.firebaseio.com",
+        projectId: "my-first-app-9f15d",
+        storageBucket: "my-first-app-9f15d.firebasestorage.app",
+        messagingSenderId: "869439564905",
+        appId: "1:869439564905:web:ac84c328fbb1c73281d6f8"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    let isLoginMode = true;
+    let balance = 0;
+
+    // --- Authentication Logic ---
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('auth-page').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+            document.getElementById('navbar').style.display = 'flex';
+            document.getElementById('user-email-display').innerText = user.email;
+            document.getElementById('user-id-display').innerText = user.uid.substring(0, 8).toUpperCase();
+            loadUserData(user.uid);
+        } else {
+            document.getElementById('auth-page').style.display = 'flex';
+            document.getElementById('app-content').style.display = 'none';
+            document.getElementById('navbar').style.display = 'none';
+        }
+    });
+
+    function handleAuth() {
+        const email = document.getElementById('auth-email').value;
+        const pass = document.getElementById('auth-pass').value;
+        if (!email || !pass) return alert("Please fill all fields!");
+
+        if (isLoginMode) {
+            auth.signInWithEmailAndPassword(email, pass).catch(e => alert(e.message));
+        } else {
+            auth.createUserWithEmailAndPassword(email, pass).then(res => {
+                db.ref('users/' + res.user.uid).set({ coins: 0, email: email, uid: res.user.uid, totalEarn: 0 });
+            }).catch(e => alert(e.message));
+        }
+    }
+
+    function forgotPassword() {
+        const email = document.getElementById('auth-email').value;
+        if (!email) return alert("Please enter your email first!");
+        auth.sendPasswordResetEmail(email).then(() => {
+            alert("Password reset link sent to your email!");
+        }).catch(e => alert(e.message));
+    }
+
+    function toggleAuthMode() {
+        isLoginMode = !isLoginMode;
+        document.getElementById('auth-title').innerText = isLoginMode ? "Welcome Back" : "Create Account";
+        document.getElementById('auth-btn').innerText = isLoginMode ? "Login Now" : "Sign Up";
+        document.getElementById('auth-toggle').innerText = isLoginMode ? "Create an account" : "Already have an account? Login";
+    }
+
+    function logout() { auth.signOut(); }
+
+    // --- Core App Functions ---
+    function loadUserData(uid) {
+        db.ref('users/' + uid).on('value', s => {
+            if(s.val()) {
+                balance = s.val().coins;
+                document.getElementById('user-coins').innerText = balance;
+            }
+        });
+    }
+
+    function claimDaily() {
+        const last = localStorage.getItem('last_d_' + auth.currentUser.uid);
+        if(last === new Date().toDateString()) return alert("Already claimed today!");
+        updateCoins(50);
+        localStorage.setItem('last_d_' + auth.currentUser.uid, new Date().toDateString());
+        alert("Success! 50 coins added.");
+    }
+
+    function startVideoTask() {
+        let btn = document.getElementById('v-btn');
+        btn.disabled = true;
+        window.open('https://omg10.com/4/10587051', '_blank');
+        let c = 15;
+        let t = setInterval(() => {
+            document.getElementById('v-timer').innerText = "Wait " + c-- + "s";
+            if(c < 0) {
+                clearInterval(t);
+                updateCoins(10);
+                btn.disabled = false;
+                document.getElementById('v-timer').innerText = "Added 10 Coins!";
+                setTimeout(() => document.getElementById('v-timer').innerText = "", 2000);
+            }
+        }, 1000);
+    }
+
+    function updateCoins(a) {
+        db.ref('users/' + auth.currentUser.uid).update({ coins: balance + a });
+    }
+
+    function showTab(t, b) {
+        document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+        document.getElementById(t + '-page').style.display = 'block';
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active-nav'));
+        b.classList.add('active-nav');
+    }
+
+    function submitWithdraw() {
+        let a = parseInt(document.getElementById('w-amount').value);
+        let n = document.getElementById('w-number').value;
+        if(a >= 5000 && balance >= a && n.length > 10) {
+            db.ref('withdraws').push({ uid: auth.currentUser.uid, amount: a, number: n, status: 'Pending', email: auth.currentUser.email });
+            updateCoins(-a);
+            alert("Withdraw request submitted!");
+        } else alert("Invalid request or low balance!");
+    }
+</script>
+</body>
+</html>
+
